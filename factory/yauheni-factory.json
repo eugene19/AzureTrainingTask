@@ -1,0 +1,9 @@
+{
+	"name": "yauheni-factory",
+	"location": "centralus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "941a6aae-c82a-4923-9554-7ddb1d547b72",
+		"tenantId": "85eedffb-3d37-486f-8bf7-42f4b20b242a"
+	}
+}

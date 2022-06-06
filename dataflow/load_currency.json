@@ -1,0 +1,62 @@
+{
+	"name": "load_currency",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "CurrencyRestService",
+						"type": "DatasetReference"
+					},
+					"name": "restCurrency"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureMySQL",
+						"type": "DatasetReference"
+					},
+					"name": "saveToMysql"
+				}
+			],
+			"transformations": [
+				{
+					"name": "selectSeveralColumns"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          body as (base as string, date as date, rates as (AED as double, AFN as double, ALL as double, AMD as double, ANG as double, AOA as double, ARS as double, AUD as double, AWG as double, AZN as double, BAM as double, BBD as double, BDT as double, BGN as double, BHD as double, BIF as double, BMD as double, BND as double, BOB as double, BRL as double, BSD as double, BTC as double, BTN as double, BWP as double, BYN as double, BYR as double, BZD as double, CAD as double, CDF as double, CHF as double, CLF as double, CLP as double, CNY as double, COP as double, CRC as double, CUC as double, CUP as double, CVE as double, CZK as double, DJF as double, DKK as double, DOP as double, DZD as double, EGP as double, ERN as double, ETB as double, EUR as boolean, FJD as double, FKP as double, GBP as double, GEL as double, GGP as double, GHS as double, GIP as double, GMD as double, GNF as double, GTQ as double, GYD as double, HKD as double, HNL as double, HRK as double, HTG as double, HUF as double, IDR as double, ILS as double, IMP as double, INR as double, IQD as double, IRR as double, ISK as double, JEP as double, JMD as double, JOD as double, JPY as double, KES as double, KGS as double, KHR as double, KMF as double, KPW as double, KRW as double, KWD as double, KYD as double, KZT as double, LAK as double, LBP as double, LKR as double, LRD as double, LSL as double, LTL as double, LVL as double, LYD as double, MAD as double, MDL as double, MGA as double, MKD as double, MMK as double, MNT as double, MOP as double, MRO as double, MUR as double, MVR as double, MWK as double, MXN as double, MYR as double, MZN as double, NAD as double, NGN as double, NIO as double, NOK as double, NPR as double, NZD as double, OMR as double, PAB as double, PEN as double, PGK as double, PHP as double, PKR as double, PLN as double, PYG as double, QAR as double, RON as double, RSD as double, RUB as double, RWF as double, SAR as double, SBD as double, SCR as double, SDG as double, SEK as double, SGD as double, SHP as double, SLL as double, SOS as double, SRD as double, STD as double, SVC as double, SYP as double, SZL as double, THB as double, TJS as double, TMT as double, TND as double, TOP as double, TRY as double, TTD as double, TWD as double, TZS as double, UAH as double, UGX as double, USD as double, UYU as double, UZS as double, VEF as double, VND as double, VUV as double, WST as double, XAF as double, XAG as double, XAU as double, XCD as double, XDR as double, XOF as double, XPF as double, YER as double, ZAR as double, ZMK as double, ZMW as double, ZWL as double), success as boolean, timestamp as integer),",
+				"          headers as [string,string]",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     httpMethod: 'GET',",
+				"     timeout: 30,",
+				"     requestInterval: 0,",
+				"     paginationRules: ['supportRFC5988' -> 'true'],",
+				"     responseFormat: ['type' -> 'json', 'documentForm' -> 'documentPerLine']) ~> restCurrency",
+				"restCurrency select(mapColumn(",
+				"          timestamp = body.timestamp,",
+				"          date = body.date,",
+				"          BYN = body.rates.BYN,",
+				"          RUB = body.rates.RUB,",
+				"          USD = body.rates.USD",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectSeveralColumns",
+				"selectSeveralColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> saveToMysql"
+			]
+		}
+	}
+}

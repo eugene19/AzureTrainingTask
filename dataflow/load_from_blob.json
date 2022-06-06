@@ -1,0 +1,96 @@
+{
+	"name": "load_from_blob",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "CurrencyAvroFromBlob",
+						"type": "DatasetReference"
+					},
+					"name": "loadFromBlob"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureMySQL",
+						"type": "DatasetReference"
+					},
+					"name": "saveToSQL"
+				}
+			],
+			"transformations": [
+				{
+					"name": "parseJsonBody"
+				},
+				{
+					"name": "selectSeveralCurrencies"
+				},
+				{
+					"name": "filter"
+				},
+				{
+					"name": "sortByDate"
+				},
+				{
+					"name": "deleteDuplicates"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          SequenceNumber as long,",
+				"          Offset as string,",
+				"          EnqueuedTimeUtc as string,",
+				"          SystemProperties as [string,string],",
+				"          Properties as [string,string],",
+				"          Body as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     wildcardPaths:['yauheni-namespace/yauheni-hub/**/**/**/**/**/**/*.avro']) ~> loadFromBlob",
+				"loadFromBlob parse(Body = Body ? (success as boolean,",
+				"          timestamp as integer,",
+				"          base as string,",
+				"          date as string,",
+				"          rates as (USD as double,",
+				"          RUB as double,",
+				"          BYN as double,",
+				"          EUR as double)),",
+				"     format: 'json',",
+				"     documentForm: 'singleDocument') ~> parseJsonBody",
+				"parseJsonBody select(mapColumn(",
+				"          timestamp = Body.timestamp,",
+				"          date = Body.date,",
+				"          USD = Body.rates.USD,",
+				"          RUB = Body.rates.RUB,",
+				"          BYN = Body.rates.BYN",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectSeveralCurrencies",
+				"selectSeveralCurrencies filter(and(\r",
+				"    or( USD > 0, \r",
+				"        or( BYN > 0, \r",
+				"        RUB > 0)\r",
+				"    ), \r",
+				"    not(isNull(date))\r",
+				")) ~> filter",
+				"deleteDuplicates sort(asc(date, true)) ~> sortByDate",
+				"filter aggregate(groupBy(timestamp),",
+				"     each(match(name!='timestamp'), $$ = last($$))) ~> deleteDuplicates",
+				"sortByDate sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     preSQLs:['TRUNCATE TABLE currency;'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> saveToSQL"
+			]
+		}
+	}
+}
